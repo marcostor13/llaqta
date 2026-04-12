@@ -78,7 +78,8 @@ import { lastValueFrom } from 'rxjs';
                           <th class="pb-4">DNI</th>
                           <th class="pb-4">Comprador</th>
                           <th class="pb-4">Tipo</th>
-                          <th class="pb-4 text-right">Estado</th>
+                          <th class="pb-4">Estado</th>
+                          <th class="pb-4 text-right">Acciones</th>
                        </tr>
                     </thead>
                     <tbody class="divide-y divide-white/5">
@@ -86,9 +87,15 @@ import { lastValueFrom } from 'rxjs';
                           <td class="py-4">{{t.dni}}</td>
                           <td class="py-4">{{t.fullName}}</td>
                           <td class="py-4"><span class="px-2 py-1 bg-white/5 rounded text-[10px]">{{t.type}}</span></td>
-                          <td class="py-4 text-right">
+                          <td class="py-4">
                              <span *ngIf="t.isValidated" class="text-primary font-bold">✓ Validado</span>
                              <span *ngIf="!t.isValidated" class="text-white/40">Pendiente</span>
+                          </td>
+                          <td class="py-4 text-right">
+                             <div class="flex justify-end gap-2">
+                                <button (click)="viewDetails(t)" class="p-2 hover:bg-white/10 rounded-lg transition-colors text-secondary" title="Ver Detalles">👁</button>
+                                <button (click)="deleteTicket(t._id)" class="p-2 hover:bg-red-500/20 rounded-lg transition-colors text-red-500" title="Eliminar">🗑</button>
+                             </div>
                           </td>
                        </tr>
                     </tbody>
@@ -119,16 +126,21 @@ import { lastValueFrom } from 'rxjs';
                        </div>
                     </div>
                     
-                    <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-4">
                        <div class="text-right">
                           <p class="text-[9px] text-white/30 uppercase font-bold mb-1">Monto a Validar</p>
                           <p class="text-2xl font-display font-bold text-white">S/ {{t.price}}</p>
                        </div>
-                       <button (click)="approvePayment(t._id)" [disabled]="isApproving === t._id" 
-                               class="bg-secondary text-dark px-6 py-3 rounded-xl font-bold text-xs uppercase hover:scale-105 active:scale-95 transition-all disabled:opacity-50">
-                          <span *ngIf="isApproving !== t._id">Validar Pago</span>
-                          <span *ngIf="isApproving === t._id">Aprobando...</span>
-                       </button>
+                       <div class="flex flex-col gap-2">
+                          <button (click)="approvePayment(t._id)" [disabled]="isApproving === t._id" 
+                                  class="bg-secondary text-dark px-4 py-2 rounded-xl font-bold text-[10px] uppercase hover:scale-105 active:scale-95 transition-all disabled:opacity-50">
+                             <span *ngIf="isApproving !== t._id">Validar Pago</span>
+                             <span *ngIf="isApproving === t._id">Aprobando...</span>
+                          </button>
+                          <button (click)="deleteTicket(t._id)" class="bg-red-500/10 text-red-500 px-4 py-2 rounded-xl font-bold text-[10px] uppercase hover:bg-red-500/20 transition-all text-center">
+                             Eliminar
+                          </button>
+                       </div>
                     </div>
                  </div>
               </div>
@@ -158,6 +170,75 @@ import { lastValueFrom } from 'rxjs';
               <button (click)="scanStatus.set(null)" class="mt-6 text-[10px] font-bold uppercase tracking-widest text-white/40">Reiniciar Escáner</button>
            </div>
         </div>
+
+        <!-- Ticket Detail Modal -->
+        <div *ngIf="selectedTicket()" class="fixed inset-0 z-[110] bg-dark/95 backdrop-blur-md flex items-center justify-center p-6 animate-in fade-in duration-300">
+           <div class="bg-page w-full max-w-lg rounded-[2.5rem] overflow-hidden border border-white/5 shadow-2xl flex flex-col">
+              <div class="p-8 bg-accent flex justify-between items-center text-white">
+                 <div>
+                    <p class="text-[10px] font-bold uppercase text-secondary tracking-widest mb-1">Detalle de Entrada</p>
+                    <h3 class="font-display text-2xl font-bold uppercase italic">ZONA {{selectedTicket().type}}</h3>
+                 </div>
+                 <button (click)="selectedTicket.set(null)" class="text-3xl text-white/50 hover:text-white transition-colors">&times;</button>
+              </div>
+              
+              <div class="p-8 space-y-8 max-h-[70vh] overflow-y-auto">
+                 <!-- Status Badge -->
+                 <div class="flex justify-between items-center bg-white/5 p-4 rounded-3xl border border-white/5">
+                    <span class="text-[10px] font-bold uppercase text-white/40">Estado actual</span>
+                    <span class="px-4 py-1 rounded-full text-[10px] font-bold uppercase"
+                          [ngClass]="{
+                            'bg-orange-500/20 text-orange-400': selectedTicket().status === 'verification',
+                            'bg-primary/20 text-primary': selectedTicket().status === 'paid',
+                            'bg-white/10 text-white/50': selectedTicket().status === 'pending'
+                          }">
+                       {{selectedTicket().status}}
+                    </span>
+                 </div>
+
+                 <div class="grid grid-cols-2 gap-8">
+                    <div class="space-y-1">
+                       <p class="text-[9px] uppercase font-bold text-white/30">Nombre Completo</p>
+                       <p class="text-sm font-bold text-white uppercase">{{selectedTicket().fullName}}</p>
+                    </div>
+                    <div class="space-y-1 text-right">
+                       <p class="text-[9px] uppercase font-bold text-white/30">DNI</p>
+                       <p class="text-sm font-mono font-bold text-secondary">{{selectedTicket().dni}}</p>
+                    </div>
+                    <div class="space-y-1">
+                       <p class="text-[9px] uppercase font-bold text-white/30">Teléfono (Yape)</p>
+                       <p class="text-sm font-bold text-white">{{selectedTicket().phone}}</p>
+                    </div>
+                    <div class="space-y-1 text-right">
+                       <p class="text-[9px] uppercase font-bold text-white/30">Correo Electrónico</p>
+                       <p class="text-xs font-bold text-white/70">{{selectedTicket().email}}</p>
+                    </div>
+                    <div class="space-y-1">
+                       <p class="text-[9px] uppercase font-bold text-white/30">Fecha de Registro</p>
+                       <p class="text-xs font-bold text-white">{{selectedTicket().createdAt | date:'dd MMM yyyy, hh:mm a'}}</p>
+                    </div>
+                    <div class="space-y-1 text-right">
+                       <p class="text-[9px] uppercase font-bold text-white/30">Precio Pagado</p>
+                       <p class="text-sm font-bold text-secondary">S/ {{selectedTicket().price}}</p>
+                    </div>
+                 </div>
+
+                 <!-- QR Token if available -->
+                 <div *ngIf="selectedTicket().qrToken" class="bg-white/5 p-6 rounded-3xl border border-dashed border-white/10 text-center">
+                    <p class="text-[9px] uppercase font-bold text-white/30 mb-4 tracking-[0.2em]">Token de Seguridad</p>
+                    <div class="bg-white p-2 inline-block rounded-xl mb-4">
+                       <img [src]="selectedTicket().qrDataUrl" class="w-24 h-24">
+                    </div>
+                    <p class="font-mono text-xs font-bold text-secondary tracking-widest uppercase">{{selectedTicket().qrToken}}</p>
+                 </div>
+              </div>
+
+              <div class="p-8 bg-white/5 flex gap-4">
+                 <button (click)="selectedTicket.set(null)" class="flex-1 px-6 py-4 bg-white/5 rounded-2xl text-[10px] font-bold uppercase hover:bg-white/10 transition-all">Cerrar</button>
+                 <button (click)="deleteTicket(selectedTicket()._id); selectedTicket.set(null)" class="px-6 py-4 bg-red-500/10 text-red-500 rounded-2xl text-[10px] font-bold uppercase hover:bg-red-500/20 transition-all">Eliminar Registro</button>
+              </div>
+           </div>
+        </div>
       </div>
     </div>
   `,
@@ -174,6 +255,7 @@ export class BackofficeComponent {
   view = signal<'stats' | 'scanner' | 'payments'>('stats');
   stats = signal<any>(null);
   scanStatus = signal<any>(null);
+  selectedTicket = signal<any>(null);
   isApproving: string | null = null;
   pinErrorMessage = signal('');
 
@@ -231,10 +313,24 @@ export class BackofficeComponent {
       await lastValueFrom(this.http.post('/api/backoffice/approve-payment', { ticketId }));
       this.isApproving = null;
       this.loadStats();
-      // Switch back to stats or show success toast in a real app
     } catch (e) {
       alert('Error aprobando pago');
       this.isApproving = null;
     }
+  }
+
+  async deleteTicket(ticketId: string) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta venta? Esta acción no se puede deshacer.')) return;
+    
+    try {
+      await lastValueFrom(this.http.delete(`/api/backoffice/tickets/${ticketId}`));
+      this.loadStats();
+    } catch (e) {
+      alert('Error eliminando ticket');
+    }
+  }
+
+  viewDetails(ticket: any) {
+    this.selectedTicket.set(ticket);
   }
 }

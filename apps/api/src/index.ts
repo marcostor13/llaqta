@@ -249,6 +249,17 @@ router.get('/backoffice/stats', async (req: Request, res: Response) => {
   }
 });
 
+// 5. Delete Ticket (Backoffice)
+router.delete('/backoffice/tickets/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await Ticket.findByIdAndDelete(id);
+    res.json({ message: 'Ticket eliminado correctamente' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.get('/info', (req: Request, res: Response) => {
   res.json({ app: 'Llaqta API - Production Ready', db: 'MongoDB' });
 });
