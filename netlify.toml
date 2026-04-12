@@ -1,13 +1,14 @@
 [build]
-  # Compilamos y copiamos el resultado a la raíz para satisfacer al plugin de Netlify
+  # Compilamos y copiamos el resultado a la raíz para un despliegue limpio
   command = "bun run build && mkdir -p dist && cp -r apps/web/dist/llaqta/browser dist/"
   publish = "dist/llaqta/browser"
   functions = "apps/api/src"
 
 [build.environment]
-  # Desactivar el plugin automático de Angular si sigue dando problemas de rutas
+  # Desactivar rastro de plugins automáticos
   NETLIFY_SKIP_ANGULAR_RUNTIME = "true"
-  # Asegurar que se use Bun para la compilación
+  DISABLE_ANGULAR_RUNTIME = "true"
+  # Asegurar entorno Bun
   NPM_FLAGS = "--version" 
 
 [[redirects]]
