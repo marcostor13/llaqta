@@ -20,11 +20,12 @@ import { lastValueFrom } from 'rxjs';
           <p class="text-white/40 text-xs mb-8">Ingresa el PIN de seguridad</p>
           
           <div class="flex gap-4 justify-center mb-8">
-            <input [(ngModel)]="pin" type="password" maxlength="4" placeholder="••••"
+            <input [(ngModel)]="pin" (ngModelChange)="onPinChange()" type="password" maxlength="4" placeholder="••••"
+                   inputmode="numeric" pattern="[0-9]*"
                    class="w-32 bg-white/5 border border-white/10 rounded-2xl px-4 py-4 text-center text-2xl tracking-[1em] focus:border-secondary outline-none transition-all">
           </div>
 
-          <button (click)="login()" class="btn-primary !bg-secondary !text-dark w-full">Ingresar</button>
+          <button (click)="login()" [disabled]="pin.length !== 4" class="btn-primary !bg-secondary !text-dark w-full disabled:opacity-30 disabled:grayscale transition-all">Ingresar</button>
         </div>
       </div>
 
@@ -174,8 +175,21 @@ export class BackofficeComponent {
   stats = signal<any>(null);
   scanStatus = signal<any>(null);
   isApproving: string | null = null;
+  pinErrorMessage = signal('');
+
+  onPinChange() {
+    // Solo permitir números
+    this.pin = this.pin.replace(/\D/g, '');
+    
+    // Auto-login si llega a 4 dígitos
+    if (this.pin.length === 4) {
+      this.login();
+    }
+  }
 
   login() {
+    if (this.pin.length !== 4) return;
+    
     if (this.pin === '2026') {
       this.isAuthenticated.set(true);
       this.loadStats();
