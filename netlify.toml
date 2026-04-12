@@ -1,15 +1,13 @@
 [build]
-  # Compilamos y copiamos el resultado a la raíz para un despliegue limpio
-  command = "bun run build && mkdir -p dist && cp -r apps/web/dist/llaqta/browser dist/"
-  publish = "dist/llaqta/browser"
+  # Usamos comandos estándar de npm para máxima compatibilidad con Netlify
+  command = "npm run build"
+  publish = "apps/web/dist/llaqta/browser"
   functions = "apps/api/src"
 
 [build.environment]
-  # Desactivar rastro de plugins automáticos
+  # Asegurar que no se ejecuten validaciones automáticas de Angular
   NETLIFY_SKIP_ANGULAR_RUNTIME = "true"
   DISABLE_ANGULAR_RUNTIME = "true"
-  # Asegurar entorno Bun
-  NPM_FLAGS = "--version" 
 
 [[redirects]]
   from = "/api/*"

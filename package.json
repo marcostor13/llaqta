@@ -6,11 +6,11 @@
     "apps/*"
   ],
   "scripts": {
-    "web:start": "bun run --cwd apps/web start",
-    "web:build": "bun run --cwd apps/web build",
+    "web:start": "cd apps/web && npm start",
+    "web:build": "cd apps/web && npm run build",
     "api:start": "bun run --watch apps/api/src/index.ts",
-    "api:build": "bun run --cwd apps/api build",
-    "build": "bun run web:build && bun run api:build"
+    "api:build": "cd apps/api && npm run build",
+    "build": "npm run web:build && npm run api:build"
   },
   "devDependencies": {
     "netlify-cli": "^19.0.0"
