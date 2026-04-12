@@ -1,11 +1,14 @@
 [build]
-  command = "bun run build"
-  publish = "apps/web/dist/llaqta/browser"
+  # Compilamos y copiamos el resultado a la raíz para satisfacer al plugin de Netlify
+  command = "bun run build && mkdir -p dist && cp -r apps/web/dist/llaqta/browser dist/"
+  publish = "dist/llaqta/browser"
   functions = "apps/api/src"
 
-[functions]
-  node_bundler = "esbuild"
-  external_node_modules = ["express", "serverless-http", "cors"]
+[build.environment]
+  # Desactivar el plugin automático de Angular si sigue dando problemas de rutas
+  NETLIFY_SKIP_ANGULAR_RUNTIME = "true"
+  # Asegurar que se use Bun para la compilación
+  NPM_FLAGS = "--version" 
 
 [[redirects]]
   from = "/api/*"
@@ -16,3 +19,7 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["express", "serverless-http", "cors"]
