@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
 import * as dotenv from 'dotenv';
 import path from 'path';
-import PDFDocument from 'pdfkit';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 // Load environment variables (local dev only — production uses Netlify env vars)
 dotenv.config();
@@ -56,92 +56,128 @@ const transporter = nodemailer.createTransport({
 
 // PDF Ticket Generator
 async function generateTicketPDF(ticket: any, qrDataUrl: string): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'A4', margin: 0 });
-    const chunks: Buffer[] = [];
-    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
-    doc.on('error', reject);
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595.28, 841.89]);
+  const W = page.getWidth();
+  const H = page.getHeight();
 
-    const W = 595;
-    const brown = '#462211';
-    const green = '#607d3b';
-    const gold = '#f2d25c';
-    const cream = '#fdf6e3';
-    const dark = '#1a0f0a';
+  const helvetica     = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const courierBold   = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-    // Header band
-    doc.rect(0, 0, W, 195).fill(brown);
-    doc.fillColor(gold).font('Helvetica-Bold').fontSize(9)
-       .text('✦  ENTRADA OFICIAL  ✦', 0, 38, { align: 'center', width: W, characterSpacing: 3 });
-    doc.fillColor('white').font('Helvetica-Bold').fontSize(48)
-       .text('LLAQTA FEST', 0, 55, { align: 'center', width: W, characterSpacing: 1 });
-    doc.fillColor('rgba(255,255,255,0.55)').font('Helvetica').fontSize(11)
-       .text('16 de Mayo, 2026  ·  Salón y Eventos Centenario  ·  Puquio, Ayacucho', 0, 118, { align: 'center', width: W });
-    // Decorative bottom edge of header
-    doc.rect(0, 185, W, 10).fill('#3a1b0d');
+  const brown     = rgb(0.275, 0.133, 0.067);
+  const darkBrown = rgb(0.227, 0.106, 0.051);
+  const green     = rgb(0.376, 0.490, 0.231);
+  const darkGreen = rgb(0.306, 0.408, 0.188);
+  const gold      = rgb(0.949, 0.824, 0.361);
+  const cream     = rgb(0.992, 0.965, 0.890);
+  const dark      = rgb(0.102, 0.059, 0.039);
+  const white     = rgb(1, 1, 1);
+  const lightGray = rgb(0.816, 0.784, 0.722);
+  const gray      = rgb(0.6, 0.6, 0.6);
+  const lightText = rgb(0.733, 0.733, 0.733);
 
-    // Zone badge (pill shape)
-    const zoneLabel = `ZONA ${ticket.type}`;
-    const badgeW = 200;
-    const badgeX = (W - badgeW) / 2;
-    doc.roundedRect(badgeX, 212, badgeW, 38, 19).fill(gold);
-    doc.fillColor(brown).font('Helvetica-Bold').fontSize(14)
-       .text(zoneLabel, badgeX, 224, { align: 'center', width: badgeW, characterSpacing: 2 });
+  // Convert PDFKit top-origin y to pdf-lib bottom-origin y
+  const py = (y: number, h = 0) => H - y - h;
 
-    // QR area — white card
-    const qrSize = 185;
-    const qrX = (W - qrSize) / 2;
-    const qrY = 270;
-    doc.roundedRect(qrX - 14, qrY - 14, qrSize + 28, qrSize + 28, 14)
-       .fillAndStroke('white', '#eeeeee');
-    const qrBuffer = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ''), 'base64');
-    doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
+  // Header band
+  page.drawRectangle({ x: 0, y: py(0, 195), width: W, height: 195, color: brown });
+  page.drawRectangle({ x: 0, y: py(185, 10), width: W, height: 10, color: darkBrown });
 
-    // Token below QR
-    doc.font('Courier-Bold').fontSize(11).fillColor(dark)
-       .text(ticket.qrToken, 0, qrY + qrSize + 22, { align: 'center', width: W });
-    doc.font('Helvetica').fontSize(7.5).fillColor('#bbb')
-       .text('CÓDIGO DE SEGURIDAD — NO COMPARTIR', 0, qrY + qrSize + 40, { align: 'center', width: W, characterSpacing: 1 });
-
-    // Dashed separator
-    const sepY = qrY + qrSize + 68;
-    doc.save().moveTo(50, sepY).lineTo(W - 50, sepY)
-       .dash(4, { space: 6 }).strokeColor('#d0c8b8').lineWidth(1).stroke().restore();
-
-    // Info card background
-    const infoY = sepY + 18;
-    doc.roundedRect(40, infoY, W - 80, 195, 10).fill(cream);
-
-    const drawField = (x: number, y: number, label: string, value: string) => {
-      doc.font('Helvetica').fontSize(7.5).fillColor('#999')
-         .text(label, x, y, { characterSpacing: 0.8 });
-      doc.font('Helvetica-Bold').fontSize(12).fillColor(dark)
-         .text(value, x, y + 12, { width: 200 });
-    };
-
-    const c1 = 70, c2 = 330;
-    drawField(c1, infoY + 18, 'NOMBRE COMPLETO', ticket.fullName);
-    drawField(c2, infoY + 18, 'DNI', ticket.dni);
-    drawField(c1, infoY + 72, 'TELÉFONO / YAPE', ticket.phone);
-    drawField(c2, infoY + 72, 'CORREO ELECTRÓNICO', ticket.email);
-    const fecha = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(ticket.createdAt));
-    drawField(c1, infoY + 130, 'FECHA DE COMPRA', fecha);
-    drawField(c2, infoY + 130, 'PRECIO PAGADO', `S/ ${ticket.price}`);
-
-    // Footer band
-    const footerY = 745;
-    doc.rect(0, footerY, W, 97).fill(green);
-    doc.rect(0, footerY, W, 5).fill('#4e6830');
-    doc.fillColor('white').font('Helvetica-Bold').fontSize(11)
-       .text('Este ticket es personal e intransferible', 0, footerY + 18, { align: 'center', width: W });
-    doc.font('Helvetica').fontSize(8.5).fillColor('rgba(255,255,255,0.6)')
-       .text('Preséntalo en formato digital o impreso al ingresar al evento', 0, footerY + 37, { align: 'center', width: W });
-    doc.fontSize(7.5).fillColor('rgba(255,255,255,0.35)')
-       .text('© 2026 Llaqta Fest — Todos los derechos reservados — llaqtafest.netlify.app', 0, footerY + 62, { align: 'center', width: W });
-
-    doc.end();
+  const label1 = 'ENTRADA OFICIAL';
+  page.drawText(label1, {
+    x: (W - helveticaBold.widthOfTextAtSize(label1, 9)) / 2,
+    y: py(38, 9), font: helveticaBold, size: 9, color: gold, charSpacing: 3,
   });
+  const title = 'LLAQTA FEST';
+  page.drawText(title, {
+    x: (W - helveticaBold.widthOfTextAtSize(title, 48)) / 2,
+    y: py(55, 48), font: helveticaBold, size: 48, color: white, charSpacing: 1,
+  });
+  const subtitle = '16 de Mayo, 2026  ·  Salon y Eventos Centenario  ·  Puquio, Ayacucho';
+  page.drawText(subtitle, {
+    x: (W - helvetica.widthOfTextAtSize(subtitle, 11)) / 2,
+    y: py(118, 11), font: helvetica, size: 11, color: rgb(0.8, 0.8, 0.8),
+  });
+
+  // Zone badge
+  const badgeW = 200;
+  const badgeX = (W - badgeW) / 2;
+  page.drawRectangle({ x: badgeX, y: py(212, 38), width: badgeW, height: 38, color: gold });
+  const zoneLabel = `ZONA ${ticket.type}`;
+  page.drawText(zoneLabel, {
+    x: badgeX + (badgeW - helveticaBold.widthOfTextAtSize(zoneLabel, 14)) / 2,
+    y: py(224, 14), font: helveticaBold, size: 14, color: brown, charSpacing: 2,
+  });
+
+  // QR card
+  const qrSize = 185;
+  const qrX = (W - qrSize) / 2;
+  const qrY = 270;
+  page.drawRectangle({
+    x: qrX - 14, y: py(qrY - 14, qrSize + 28), width: qrSize + 28, height: qrSize + 28,
+    color: white, borderColor: rgb(0.933, 0.933, 0.933), borderWidth: 1,
+  });
+  const qrBuffer = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ''), 'base64');
+  const qrImage = await pdfDoc.embedPng(qrBuffer);
+  page.drawImage(qrImage, { x: qrX, y: py(qrY, qrSize), width: qrSize, height: qrSize });
+
+  // Token & security label
+  page.drawText(ticket.qrToken, {
+    x: (W - courierBold.widthOfTextAtSize(ticket.qrToken, 11)) / 2,
+    y: py(qrY + qrSize + 22, 11), font: courierBold, size: 11, color: dark,
+  });
+  const secLabel = 'CODIGO DE SEGURIDAD - NO COMPARTIR';
+  page.drawText(secLabel, {
+    x: (W - helvetica.widthOfTextAtSize(secLabel, 7.5)) / 2,
+    y: py(qrY + qrSize + 40, 7.5), font: helvetica, size: 7.5, color: lightText, charSpacing: 1,
+  });
+
+  // Separator line
+  const sepY = qrY + qrSize + 68;
+  page.drawLine({ start: { x: 50, y: py(sepY) }, end: { x: W - 50, y: py(sepY) }, thickness: 1, color: lightGray });
+
+  // Info card
+  const infoY = sepY + 18;
+  page.drawRectangle({ x: 40, y: py(infoY, 195), width: W - 80, height: 195, color: cream });
+
+  const drawField = (x: number, y: number, label: string, value: string) => {
+    page.drawText(label, { x, y: py(y, 7.5), font: helvetica, size: 7.5, color: gray, charSpacing: 0.8 });
+    page.drawText(value, { x, y: py(y + 12, 12), font: helveticaBold, size: 12, color: dark });
+  };
+
+  const c1 = 70, c2 = 330;
+  drawField(c1, infoY + 18, 'NOMBRE COMPLETO', ticket.fullName);
+  drawField(c2, infoY + 18, 'DNI', ticket.dni);
+  drawField(c1, infoY + 72, 'TELEFONO / YAPE', ticket.phone);
+  drawField(c2, infoY + 72, 'CORREO ELECTRONICO', ticket.email);
+  const fecha = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(ticket.createdAt));
+  drawField(c1, infoY + 130, 'FECHA DE COMPRA', fecha);
+  drawField(c2, infoY + 130, 'PRECIO PAGADO', `S/ ${ticket.price}`);
+
+  // Footer
+  const footerY = 745;
+  page.drawRectangle({ x: 0, y: py(footerY, 97), width: W, height: 97, color: green });
+  page.drawRectangle({ x: 0, y: py(footerY, 5), width: W, height: 5, color: darkGreen });
+
+  const footer1 = 'Este ticket es personal e intransferible';
+  page.drawText(footer1, {
+    x: (W - helveticaBold.widthOfTextAtSize(footer1, 11)) / 2,
+    y: py(footerY + 18, 11), font: helveticaBold, size: 11, color: white,
+  });
+  const footer2 = 'Presentalo en formato digital o impreso al ingresar al evento';
+  page.drawText(footer2, {
+    x: (W - helvetica.widthOfTextAtSize(footer2, 8.5)) / 2,
+    y: py(footerY + 37, 8.5), font: helvetica, size: 8.5, color: rgb(0.9, 0.9, 0.9),
+  });
+  const footer3 = '© 2026 Llaqta Fest — Todos los derechos reservados — llaqtafest.netlify.app';
+  page.drawText(footer3, {
+    x: (W - helvetica.widthOfTextAtSize(footer3, 7.5)) / 2,
+    y: py(footerY + 62, 7.5), font: helvetica, size: 7.5, color: rgb(0.75, 0.75, 0.75),
+  });
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }
 
 const router = express.Router();
