@@ -21,3 +21,7 @@
 
 [functions]
   node_bundler = "esbuild"
+  included_files = ["node_modules/pdfkit/**"]
+
+  [functions.index]
+    external_node_modules = ["pdfkit"]
