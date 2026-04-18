@@ -8,8 +8,8 @@ import nodemailer from 'nodemailer';
 import * as dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// Load environment variables (local dev only — production uses Netlify env vars)
+dotenv.config();
 
 const app = express();
 app.use(cors());
