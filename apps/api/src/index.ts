@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import nodemailer from 'nodemailer';
 import * as dotenv from 'dotenv';
 import path from 'path';
+import PDFDocument from 'pdfkit';
 
 // Load environment variables (local dev only — production uses Netlify env vars)
 dotenv.config();
@@ -52,6 +53,96 @@ const transporter = nodemailer.createTransport({
     pass: process.env.PASSWORD_EMAIL
   }
 });
+
+// PDF Ticket Generator
+async function generateTicketPDF(ticket: any, qrDataUrl: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 0 });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const W = 595;
+    const brown = '#462211';
+    const green = '#607d3b';
+    const gold = '#f2d25c';
+    const cream = '#fdf6e3';
+    const dark = '#1a0f0a';
+
+    // Header band
+    doc.rect(0, 0, W, 195).fill(brown);
+    doc.fillColor(gold).font('Helvetica-Bold').fontSize(9)
+       .text('✦  ENTRADA OFICIAL  ✦', 0, 38, { align: 'center', width: W, characterSpacing: 3 });
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(48)
+       .text('LLAQTA FEST', 0, 55, { align: 'center', width: W, characterSpacing: 1 });
+    doc.fillColor('rgba(255,255,255,0.55)').font('Helvetica').fontSize(11)
+       .text('16 de Mayo, 2026  ·  Salón y Eventos Centenario  ·  Puquio, Ayacucho', 0, 118, { align: 'center', width: W });
+    // Decorative bottom edge of header
+    doc.rect(0, 185, W, 10).fill('#3a1b0d');
+
+    // Zone badge (pill shape)
+    const zoneLabel = `ZONA ${ticket.type}`;
+    const badgeW = 200;
+    const badgeX = (W - badgeW) / 2;
+    doc.roundedRect(badgeX, 212, badgeW, 38, 19).fill(gold);
+    doc.fillColor(brown).font('Helvetica-Bold').fontSize(14)
+       .text(zoneLabel, badgeX, 224, { align: 'center', width: badgeW, characterSpacing: 2 });
+
+    // QR area — white card
+    const qrSize = 185;
+    const qrX = (W - qrSize) / 2;
+    const qrY = 270;
+    doc.roundedRect(qrX - 14, qrY - 14, qrSize + 28, qrSize + 28, 14)
+       .fillAndStroke('white', '#eeeeee');
+    const qrBuffer = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ''), 'base64');
+    doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
+
+    // Token below QR
+    doc.font('Courier-Bold').fontSize(11).fillColor(dark)
+       .text(ticket.qrToken, 0, qrY + qrSize + 22, { align: 'center', width: W });
+    doc.font('Helvetica').fontSize(7.5).fillColor('#bbb')
+       .text('CÓDIGO DE SEGURIDAD — NO COMPARTIR', 0, qrY + qrSize + 40, { align: 'center', width: W, characterSpacing: 1 });
+
+    // Dashed separator
+    const sepY = qrY + qrSize + 68;
+    doc.save().moveTo(50, sepY).lineTo(W - 50, sepY)
+       .dash(4, { space: 6 }).strokeColor('#d0c8b8').lineWidth(1).stroke().restore();
+
+    // Info card background
+    const infoY = sepY + 18;
+    doc.roundedRect(40, infoY, W - 80, 195, 10).fill(cream);
+
+    const drawField = (x: number, y: number, label: string, value: string) => {
+      doc.font('Helvetica').fontSize(7.5).fillColor('#999')
+         .text(label, x, y, { characterSpacing: 0.8 });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(dark)
+         .text(value, x, y + 12, { width: 200 });
+    };
+
+    const c1 = 70, c2 = 330;
+    drawField(c1, infoY + 18, 'NOMBRE COMPLETO', ticket.fullName);
+    drawField(c2, infoY + 18, 'DNI', ticket.dni);
+    drawField(c1, infoY + 72, 'TELÉFONO / YAPE', ticket.phone);
+    drawField(c2, infoY + 72, 'CORREO ELECTRÓNICO', ticket.email);
+    const fecha = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(ticket.createdAt));
+    drawField(c1, infoY + 130, 'FECHA DE COMPRA', fecha);
+    drawField(c2, infoY + 130, 'PRECIO PAGADO', `S/ ${ticket.price}`);
+
+    // Footer band
+    const footerY = 745;
+    doc.rect(0, footerY, W, 97).fill(green);
+    doc.rect(0, footerY, W, 5).fill('#4e6830');
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(11)
+       .text('Este ticket es personal e intransferible', 0, footerY + 18, { align: 'center', width: W });
+    doc.font('Helvetica').fontSize(8.5).fillColor('rgba(255,255,255,0.6)')
+       .text('Preséntalo en formato digital o impreso al ingresar al evento', 0, footerY + 37, { align: 'center', width: W });
+    doc.fontSize(7.5).fillColor('rgba(255,255,255,0.35)')
+       .text('© 2026 Llaqta Fest — Todos los derechos reservados — llaqtafest.netlify.app', 0, footerY + 62, { align: 'center', width: W });
+
+    doc.end();
+  });
+}
 
 const router = express.Router();
 
@@ -173,6 +264,9 @@ router.post('/backoffice/approve-payment', async (req: Request, res: Response) =
     ticket.qrDataUrl = qrDataUrl;
     await ticket.save();
 
+    // Generate PDF ticket
+    const pdfBuffer = await generateTicketPDF(ticket, qrDataUrl);
+
     // Send Real Email with Premium Design
     const mailOptions = {
       from: `"Llaqta Fest" <${process.env.USER_EMAIL}>`,
@@ -204,29 +298,45 @@ router.post('/backoffice/approve-payment', async (req: Request, res: Response) =
             </div>
             <div class="content">
               <p>Hola <strong>${ticket.fullName}</strong>,</p>
-              <p>Tu pago ha sido validado con éxito por nuestro equipo. Adjuntamos tu pase digital único para el festival más esperado del año.</p>
-              
+              <p>Tu pago ha sido validado con éxito por nuestro equipo. Adjuntamos tu entrada oficial en PDF — guárdala y preséntala al ingresar al evento.</p>
+
               <div class="ticket-box">
                 <div class="badge">Zona ${ticket.type}</div>
                 <div class="qr-code">
                   <img src="cid:qrcode" width="200" height="200" alt="Código QR">
                 </div>
-                <p style="font-family: monospace; font-size: 18px; font-weight: bold; color: #462211; letter-spacing: 2px; margin: 0;">${qrToken}</p>
-                <p style="font-size: 11px; color: #888; margin-top: 5px;">TOKEN DE SEGURIDAD</p>
+                <p style="font-family: monospace; font-size: 16px; font-weight: bold; color: #462211; letter-spacing: 2px; margin: 0;">${qrToken}</p>
+                <p style="font-size: 11px; color: #888; margin-top: 5px;">CÓDIGO DE SEGURIDAD</p>
               </div>
 
-              <div class="details">
-                <div>
-                  <p style="margin:0; font-size: 10px; color: #aaa; text-transform: uppercase;">Invitado</p>
-                  <p style="margin:0; font-weight: bold;">${ticket.fullName}</p>
-                  <p style="margin:0; font-size: 12px;">DNI: ${ticket.dni}</p>
-                  <p style="margin:0; font-size: 12px;">TEL: ${ticket.phone}</p>
-                </div>
-                <div>
-                  <p style="margin:0; font-size: 10px; color: #aaa; text-transform: uppercase;">Ubicación</p>
-                  <p style="margin:0; font-weight: bold;">Puquio, Ayacucho</p>
-                  <p style="margin:0; font-size: 12px;">Mayo 16, 2026 - 7:00 PM</p>
-                </div>
+              <div style="background: #fdf6e3; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e8dfc8; color: #999; width: 40%;">Nombre</td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e8dfc8; font-weight: bold; color: #1a0f0a;">${ticket.fullName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e8dfc8; color: #999;">DNI</td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e8dfc8; font-weight: bold; color: #1a0f0a; font-family: monospace;">${ticket.dni}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e8dfc8; color: #999;">Teléfono</td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e8dfc8; font-weight: bold; color: #1a0f0a;">${ticket.phone}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e8dfc8; color: #999;">Zona</td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #e8dfc8; font-weight: bold; color: #607d3b;">${ticket.type}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #999;">Precio</td>
+                    <td style="padding: 8px 0; font-weight: bold; color: #1a0f0a;">S/ ${ticket.price}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background: #607d3b; border-radius: 12px; padding: 16px 20px; text-align: center; margin-top: 20px;">
+                <p style="margin: 0; color: white; font-size: 13px; font-weight: bold;">📎 Tu entrada en PDF está adjunta a este correo</p>
+                <p style="margin: 6px 0 0; color: rgba(255,255,255,0.7); font-size: 11px;">Descárgala y preséntala en el ingreso al evento</p>
               </div>
             </div>
             <div class="footer">
@@ -241,6 +351,11 @@ router.post('/backoffice/approve-payment', async (req: Request, res: Response) =
           filename: 'ticket-qr.png',
           path: qrDataUrl,
           cid: 'qrcode'
+        },
+        {
+          filename: `entrada-llaqta-fest-${ticket.dni}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
         }
       ]
     };
