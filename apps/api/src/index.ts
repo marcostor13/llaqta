@@ -92,6 +92,62 @@ router.post('/tickets/confirm', async (req: Request, res: Response) => {
     ticket.status = 'verification';
     await ticket.save();
 
+    // Notify admin of new payment pending verification
+    const adminMailOptions = {
+      from: `"Llaqta Fest" <${process.env.USER_EMAIL}>`,
+      to: 'produccionesllaqta@gmail.com',
+      subject: `💰 Nueva compra pendiente de verificación - ${ticket.fullName}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+            .header { background: #462211; padding: 30px; text-align: center; color: white; }
+            .content { padding: 30px; color: #1a0f0a; line-height: 1.7; }
+            .info-box { background: #fdf6e3; border-left: 4px solid #607d3b; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0e8d0; }
+            .info-row:last-child { border-bottom: none; }
+            .label { color: #888; font-size: 13px; }
+            .value { font-weight: bold; color: #462211; }
+            .button { display: block; width: fit-content; margin: 25px auto 0; padding: 14px 35px; background: #607d3b; color: white; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 15px; }
+            .footer { background: #f9f9f9; padding: 20px; text-align: center; color: #aaa; font-size: 11px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h2 style="margin:0; font-size: 22px;">Nueva compra para validar</h2>
+              <p style="margin: 8px 0 0; opacity: 0.8; font-size: 13px;">Un comprador reportó su pago y espera verificación</p>
+            </div>
+            <div class="content">
+              <div class="info-box">
+                <div class="info-row"><span class="label">Nombre</span><span class="value">${ticket.fullName}</span></div>
+                <div class="info-row"><span class="label">DNI</span><span class="value">${ticket.dni}</span></div>
+                <div class="info-row"><span class="label">Email</span><span class="value">${ticket.email}</span></div>
+                <div class="info-row"><span class="label">Teléfono</span><span class="value">${ticket.phone}</span></div>
+                <div class="info-row"><span class="label">Tipo de entrada</span><span class="value">${ticket.type}</span></div>
+                <div class="info-row"><span class="label">Precio</span><span class="value">S/ ${ticket.price}</span></div>
+                <div class="info-row"><span class="label">ID del ticket</span><span class="value" style="font-size: 11px; font-family: monospace;">${ticket._id}</span></div>
+              </div>
+              <p style="text-align: center; color: #666; font-size: 14px;">Ingresa al panel de administración para aprobar o rechazar este pago:</p>
+              <a href="https://llaqtafest.netlify.app/admin" class="button">Ir al Panel Admin</a>
+            </div>
+            <div class="footer">© 2026 Llaqta Fest — Este mensaje es automático, no responder.</div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      await transporter.sendMail(adminMailOptions);
+      console.log(`[ADMIN] Notificación enviada a administrador por compra de ${ticket.fullName}`);
+    } catch (emailError) {
+      console.error('[ADMIN] Error al enviar notificación al administrador:', emailError);
+    }
+
     res.json({ message: 'Solicitud de verificación enviada', ticket });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
