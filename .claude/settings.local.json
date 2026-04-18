@@ -10,7 +10,11 @@
       "Bash(./node_modules/.bin/tsc --noEmit -p apps/api/tsconfig.json)",
       "Bash(bun x *)",
       "Bash('/c/Marcos/Proyectos/llaqta/llaqta/node_modules/.bun/typescript@5.9.3/node_modules/typescript/bin/tsc' --noEmit -p '/c/Marcos/Proyectos/llaqta/llaqta/apps/api/tsconfig.json')",
-      "Bash(bun run *)"
+      "Bash(bun run *)",
+      "Bash(node -e \"const ts = require\\('./apps/web/node_modules/typescript'\\); console.log\\('TS version:', ts.version\\);\")",
+      "Bash(node apps/web/node_modules/typescript/bin/tsc --noEmit -p apps/web/tsconfig.app.json)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)"
     ]
   }
 }

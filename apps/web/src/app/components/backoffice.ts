@@ -47,6 +47,11 @@ import { lastValueFrom } from 'rxjs';
               </div>
             </div>
             <div class="flex items-center gap-2">
+              <button (click)="showCourtesyModal.set(true)"
+                      class="flex items-center gap-1.5 px-3 py-2 bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 rounded-xl text-xs font-bold uppercase tracking-wide transition-all">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span class="hidden sm:inline">Cortesía</span>
+              </button>
               <button (click)="loadStats()" class="p-2 rounded-xl text-white/30 hover:text-white hover:bg-white/5 transition-all" title="Actualizar">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
               </button>
@@ -100,14 +105,14 @@ import { lastValueFrom } from 'rxjs';
             <!-- Metric Cards -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div class="bg-white/[0.04] border border-white/[0.07] rounded-2xl p-5">
-                <p class="text-[10px] uppercase font-bold text-white/30 tracking-widest mb-3">Ventas Pagadas</p>
-                <h3 class="text-4xl font-display font-bold text-secondary leading-none">{{stats()?.totalSales || 0}}</h3>
+                <p class="text-[10px] uppercase font-bold text-white/30 tracking-widest mb-3">Entradas Pagadas</p>
+                <h3 class="text-4xl font-display font-bold text-secondary leading-none">{{stats()?.paidCount || 0}}</h3>
                 <p class="text-[10px] text-white/20 mt-2">entradas confirmadas</p>
               </div>
               <div class="bg-white/[0.04] border border-white/[0.07] rounded-2xl p-5">
-                <p class="text-[10px] uppercase font-bold text-white/30 tracking-widest mb-3">Por Verificar</p>
-                <h3 class="text-4xl font-display font-bold text-orange-400 leading-none">{{stats()?.pendingVerification || 0}}</h3>
-                <p class="text-[10px] text-white/20 mt-2">pagos pendientes</p>
+                <p class="text-[10px] uppercase font-bold text-white/30 tracking-widest mb-3">De Cortesía</p>
+                <h3 class="text-4xl font-display font-bold text-purple-400 leading-none">{{stats()?.courtesyCount || 0}}</h3>
+                <p class="text-[10px] text-white/20 mt-2">entradas de cortesía</p>
               </div>
               <div class="bg-white/[0.04] border border-white/[0.07] rounded-2xl p-5">
                 <p class="text-[10px] uppercase font-bold text-white/30 tracking-widest mb-3">Validados (Puerta)</p>
@@ -115,17 +120,40 @@ import { lastValueFrom } from 'rxjs';
                 <p class="text-[10px] text-white/20 mt-2">ingresaron al evento</p>
               </div>
               <div class="bg-white/[0.04] border border-white/[0.07] rounded-2xl p-5">
-                <p class="text-[10px] uppercase font-bold text-white/30 tracking-widest mb-3">Sin Validar</p>
-                <h3 class="text-4xl font-display font-bold text-white leading-none">{{stats()?.pendingValidation || 0}}</h3>
-                <p class="text-[10px] text-white/20 mt-2">aún no ingresan</p>
+                <p class="text-[10px] uppercase font-bold text-white/30 tracking-widest mb-3">Por Verificar</p>
+                <h3 class="text-4xl font-display font-bold text-orange-400 leading-none">{{stats()?.pendingVerification || 0}}</h3>
+                <p class="text-[10px] text-white/20 mt-2">pagos pendientes</p>
               </div>
             </div>
 
             <!-- Sales Table / Cards -->
             <div class="bg-white/[0.04] border border-white/[0.07] rounded-2xl overflow-hidden">
-              <div class="px-5 py-4 border-b border-white/[0.06] flex justify-between items-center">
-                <h4 class="font-display text-lg font-bold">Últimas Ventas</h4>
-                <span class="text-[10px] text-white/30 uppercase font-bold">{{stats()?.recentSales?.length || 0}} registros</span>
+              <div class="px-5 py-4 border-b border-white/[0.06] flex flex-wrap gap-3 justify-between items-center">
+                <h4 class="font-display text-lg font-bold">Todas las Entradas</h4>
+                <div class="flex items-center gap-2">
+                  <!-- Filter Pills -->
+                  <div class="flex gap-1.5">
+                    <button (click)="ticketFilter.set('all')"
+                            class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all"
+                            [class.bg-white]="ticketFilter() === 'all'" [class.text-dark]="ticketFilter() === 'all'"
+                            [class.bg-white\/10]="ticketFilter() !== 'all'" [class.text-white\/50]="ticketFilter() !== 'all'">
+                      Todas
+                    </button>
+                    <button (click)="ticketFilter.set('paid')"
+                            class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all"
+                            [class.bg-secondary]="ticketFilter() === 'paid'" [class.text-dark]="ticketFilter() === 'paid'"
+                            [class.bg-white\/10]="ticketFilter() !== 'paid'" [class.text-white\/50]="ticketFilter() !== 'paid'">
+                      Pagadas
+                    </button>
+                    <button (click)="ticketFilter.set('courtesy')"
+                            class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide transition-all"
+                            [class.bg-purple-500]="ticketFilter() === 'courtesy'" [class.text-white]="ticketFilter() === 'courtesy'"
+                            [class.bg-white\/10]="ticketFilter() !== 'courtesy'" [class.text-white\/50]="ticketFilter() !== 'courtesy'">
+                      Cortesía
+                    </button>
+                  </div>
+                  <span class="text-[10px] text-white/30 uppercase font-bold">{{filteredTickets.length}} registros</span>
+                </div>
               </div>
 
               <!-- Desktop Table -->
@@ -144,9 +172,10 @@ import { lastValueFrom } from 'rxjs';
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-white/[0.04]">
-                    <tr *ngFor="let t of stats()?.recentSales" class="hover:bg-white/[0.03] transition-colors group">
+                    <tr *ngFor="let t of filteredTickets" class="hover:bg-white/[0.03] transition-colors group">
                       <td class="px-5 py-4">
                         <p class="font-semibold text-white">{{t.fullName}}</p>
+                        <span *ngIf="t.isCourtesy" class="inline-block mt-0.5 px-2 py-0.5 bg-purple-500/15 text-purple-400 border border-purple-500/20 rounded-full text-[9px] font-bold uppercase">Cortesía</span>
                       </td>
                       <td class="px-5 py-4">
                         <span class="font-mono text-sm text-secondary">{{t.dni}}</span>
@@ -162,7 +191,8 @@ import { lastValueFrom } from 'rxjs';
                         </span>
                       </td>
                       <td class="px-5 py-4">
-                        <span class="font-display font-bold text-white">S/ {{t.price}}</span>
+                        <span *ngIf="!t.isCourtesy" class="font-display font-bold text-white">S/ {{t.price}}</span>
+                        <span *ngIf="t.isCourtesy" class="font-bold text-purple-400 text-xs">CORTESÍA</span>
                       </td>
                       <td class="px-5 py-4">
                         <p class="text-xs text-white/50">{{t.createdAt | date:'dd MMM yyyy'}}</p>
@@ -187,24 +217,31 @@ import { lastValueFrom } from 'rxjs';
                         </div>
                       </td>
                     </tr>
+                    <tr *ngIf="filteredTickets.length === 0">
+                      <td colspan="8" class="py-16 text-center text-white/20 text-sm">No hay entradas registradas</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
 
               <!-- Mobile Cards -->
               <div class="md:hidden divide-y divide-white/[0.05]">
-                <div *ngFor="let t of stats()?.recentSales" class="p-4 hover:bg-white/[0.02]">
+                <div *ngFor="let t of filteredTickets" class="p-4 hover:bg-white/[0.02]">
                   <div class="flex justify-between items-start mb-3">
                     <div>
                       <p class="font-semibold text-white text-sm">{{t.fullName}}</p>
-                      <p class="text-xs font-mono text-secondary">{{t.dni}}</p>
+                      <div class="flex items-center gap-1.5 mt-0.5">
+                        <p class="text-xs font-mono text-secondary">{{t.dni}}</p>
+                        <span *ngIf="t.isCourtesy" class="px-1.5 py-0.5 bg-purple-500/15 text-purple-400 rounded-full text-[9px] font-bold uppercase">Cortesía</span>
+                      </div>
                     </div>
                     <div class="flex items-center gap-2">
                       <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase"
                             [ngClass]="t.type === 'NACACHO' ? 'bg-secondary/15 text-secondary' : 'bg-primary/15 text-primary'">
                         {{t.type}}
                       </span>
-                      <span class="font-display font-bold text-white text-sm">S/ {{t.price}}</span>
+                      <span *ngIf="!t.isCourtesy" class="font-display font-bold text-white text-sm">S/ {{t.price}}</span>
+                      <span *ngIf="t.isCourtesy" class="font-bold text-purple-400 text-xs">CORTESÍA</span>
                     </div>
                   </div>
                   <div class="flex justify-between items-center">
@@ -224,8 +261,8 @@ import { lastValueFrom } from 'rxjs';
                     </div>
                   </div>
                 </div>
-                <div *ngIf="!stats()?.recentSales?.length" class="py-16 text-center text-white/20 text-sm">
-                  No hay ventas registradas aún
+                <div *ngIf="filteredTickets.length === 0" class="py-16 text-center text-white/20 text-sm">
+                  No hay entradas registradas aún
                 </div>
               </div>
             </div>
@@ -253,8 +290,6 @@ import { lastValueFrom } from 'rxjs';
 
             <div *ngFor="let t of stats()?.verificationNeeded"
                  class="bg-white/[0.04] border border-white/[0.07] rounded-2xl overflow-hidden hover:border-white/[0.12] transition-all">
-
-              <!-- Card Header -->
               <div class="px-5 py-4 border-b border-white/[0.05] flex flex-wrap gap-3 justify-between items-center">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
@@ -273,8 +308,6 @@ import { lastValueFrom } from 'rxjs';
                   <span class="text-2xl font-display font-bold text-white">S/ {{t.price}}</span>
                 </div>
               </div>
-
-              <!-- Card Body -->
               <div class="px-5 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                 <div>
                   <p class="text-[9px] uppercase font-bold text-white/20 tracking-widest mb-1">Teléfono / Yape</p>
@@ -289,8 +322,6 @@ import { lastValueFrom } from 'rxjs';
                   <p class="text-white/50">{{t.createdAt | date:'dd MMM yyyy, hh:mm a'}}</p>
                 </div>
               </div>
-
-              <!-- Card Actions -->
               <div class="px-5 py-4 bg-white/[0.02] border-t border-white/[0.05] flex flex-wrap gap-3 justify-end">
                 <button (click)="viewDetails(t)" class="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white rounded-xl text-xs font-bold uppercase transition-all">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -319,7 +350,6 @@ import { lastValueFrom } from 'rxjs';
 
             <div class="w-full rounded-3xl overflow-hidden ring-4 ring-white/5 shadow-2xl relative bg-black aspect-square">
               <zxing-scanner (scanSuccess)="onScanSuccess($event)" class="w-full h-full"></zxing-scanner>
-              <!-- Scan frame overlay -->
               <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div class="w-48 h-48 relative">
                   <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-secondary rounded-tl-lg"></div>
@@ -329,55 +359,69 @@ import { lastValueFrom } from 'rxjs';
                 </div>
               </div>
             </div>
-
-            <!-- Scan Result -->
-            <div *ngIf="scanStatus()" class="w-full rounded-2xl overflow-hidden"
-                 [ngClass]="scanStatus()?.success ? 'bg-primary/10 border border-primary/20' : 'bg-red-500/10 border border-red-500/20'">
-              <div class="p-5">
-                <div class="flex items-center gap-3 mb-4">
-                  <div class="w-10 h-10 rounded-xl flex items-center justify-center"
-                       [ngClass]="scanStatus()?.success ? 'bg-primary/20' : 'bg-red-500/20'">
-                    <svg *ngIf="scanStatus()?.success" class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-                    <svg *ngIf="!scanStatus()?.success" class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                  </div>
-                  <div>
-                    <p class="font-display font-bold text-base">{{scanStatus()?.message}}</p>
-                    <p *ngIf="scanStatus()?.validatedAt" class="text-[10px] text-white/30 mt-0.5">
-                      Validado: {{scanStatus()?.validatedAt | date:'dd MMM, hh:mm a'}}
-                    </p>
-                  </div>
-                </div>
-
-                <div *ngIf="scanStatus()?.success" class="grid grid-cols-3 gap-3 text-center bg-black/20 rounded-xl p-4">
-                  <div>
-                    <p class="text-[9px] uppercase font-bold text-white/20 mb-1">Nombre</p>
-                    <p class="text-xs font-bold text-white leading-tight">{{scanStatus()?.fullName || '—'}}</p>
-                  </div>
-                  <div>
-                    <p class="text-[9px] uppercase font-bold text-white/20 mb-1">DNI</p>
-                    <p class="text-sm font-mono font-bold text-secondary">{{scanStatus()?.dni || '—'}}</p>
-                  </div>
-                  <div>
-                    <p class="text-[9px] uppercase font-bold text-white/20 mb-1">Zona</p>
-                    <p class="text-xs font-bold text-white">{{scanStatus()?.type || '—'}}</p>
-                  </div>
-                </div>
-
-                <div *ngIf="!scanStatus()?.success && scanStatus()?.dni" class="mt-3 bg-black/20 rounded-xl p-4 flex justify-between items-center">
-                  <span class="text-[10px] text-white/30 uppercase font-bold">DNI</span>
-                  <span class="text-secondary font-display font-bold text-lg">{{scanStatus()?.dni}}</span>
-                </div>
-              </div>
-
-              <div class="px-5 pb-5">
-                <button (click)="scanStatus.set(null)" class="w-full py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase tracking-widest text-white/40 hover:text-white transition-all">
-                  Escanear otro ticket
-                </button>
-              </div>
-            </div>
           </div>
 
         </main>
+      </div>
+
+      <!-- ===== FULLSCREEN SCANNER RESULT OVERLAY ===== -->
+      <div *ngIf="scanStatus()" class="fixed inset-0 z-[200] flex flex-col items-center justify-center p-8 transition-all"
+           [ngClass]="{
+             'bg-green-600': scanStatus()?.resultType === 'success',
+             'bg-orange-500': scanStatus()?.resultType === 'already_validated',
+             'bg-red-600': scanStatus()?.resultType === 'not_found' || !scanStatus()?.resultType
+           }">
+
+        <!-- Icon -->
+        <div class="w-32 h-32 rounded-full bg-white/20 flex items-center justify-center mb-8">
+          <svg *ngIf="scanStatus()?.resultType === 'success'" class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+          </svg>
+          <svg *ngIf="scanStatus()?.resultType === 'already_validated'" class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <svg *ngIf="scanStatus()?.resultType === 'not_found' || !scanStatus()?.resultType" class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </div>
+
+        <!-- Message -->
+        <h2 class="font-display text-4xl sm:text-5xl font-bold text-white text-center uppercase leading-tight mb-3">
+          <ng-container *ngIf="scanStatus()?.resultType === 'success'">
+            Código Validado<br>Correctamente
+          </ng-container>
+          <ng-container *ngIf="scanStatus()?.resultType === 'already_validated'">
+            Código Validado<br>Anteriormente
+          </ng-container>
+          <ng-container *ngIf="scanStatus()?.resultType === 'not_found' || !scanStatus()?.resultType">
+            Código Incorrecto<br>o No Existe
+          </ng-container>
+        </h2>
+
+        <!-- Person details if available -->
+        <div *ngIf="scanStatus()?.fullName || scanStatus()?.dni"
+             class="bg-white/20 rounded-2xl px-8 py-5 text-center mt-4 w-full max-w-sm">
+          <p *ngIf="scanStatus()?.fullName" class="text-white font-bold text-xl mb-1">{{scanStatus()?.fullName}}</p>
+          <div class="flex justify-center gap-6 mt-2">
+            <div *ngIf="scanStatus()?.dni" class="text-center">
+              <p class="text-white/60 text-[10px] uppercase font-bold mb-0.5">DNI</p>
+              <p class="text-white font-mono font-bold text-lg">{{scanStatus()?.dni}}</p>
+            </div>
+            <div *ngIf="scanStatus()?.ticketType" class="text-center">
+              <p class="text-white/60 text-[10px] uppercase font-bold mb-0.5">Zona</p>
+              <p class="text-white font-bold text-lg">{{scanStatus()?.ticketType}}</p>
+            </div>
+          </div>
+          <p *ngIf="scanStatus()?.validatedAt" class="text-white/70 text-xs mt-3">
+            Validado el {{scanStatus()?.validatedAt | date:'dd MMM yyyy, hh:mm a'}}
+          </p>
+        </div>
+
+        <!-- Dismiss button -->
+        <button (click)="scanStatus.set(null)"
+                class="mt-10 px-10 py-4 bg-white/20 hover:bg-white/30 rounded-2xl text-white font-bold text-sm uppercase tracking-widest transition-all active:scale-95">
+          Escanear otro ticket
+        </button>
       </div>
 
       <!-- ===== TICKET DETAIL MODAL ===== -->
@@ -386,36 +430,35 @@ import { lastValueFrom } from 'rxjs';
         <div class="bg-[#111] w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl overflow-hidden border border-white/10 shadow-2xl"
              (click)="$event.stopPropagation()">
 
-          <!-- Modal Header -->
           <div class="bg-fest-gradient px-6 py-5 flex justify-between items-start border-b border-white/5">
             <div>
               <p class="text-[10px] font-bold uppercase text-secondary tracking-[0.2em] mb-1">Detalle de Entrada</p>
-              <h3 class="font-display text-2xl font-bold uppercase italic">ZONA {{selectedTicket().type}}</h3>
+              <div class="flex items-center gap-2">
+                <h3 class="font-display text-2xl font-bold uppercase italic">ZONA {{selectedTicket().type}}</h3>
+                <span *ngIf="selectedTicket().isCourtesy" class="px-2.5 py-1 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full text-[9px] font-bold uppercase">Cortesía</span>
+              </div>
             </div>
             <button (click)="selectedTicket.set(null)" class="w-9 h-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl text-white/60 hover:text-white transition-all">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
 
-          <!-- Modal Body -->
           <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-
-            <!-- Status + ID -->
             <div class="flex flex-wrap gap-3 justify-between items-center">
               <span class="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase border"
                     [ngClass]="{
                       'bg-orange-500/10 text-orange-400 border-orange-500/20': selectedTicket().status === 'verification',
-                      'bg-primary/10 text-primary border-primary/20': selectedTicket().status === 'paid',
+                      'bg-primary/10 text-primary border-primary/20': selectedTicket().status === 'paid' && !selectedTicket().isCourtesy,
+                      'bg-purple-500/10 text-purple-400 border-purple-500/20': selectedTicket().isCourtesy,
                       'bg-white/5 text-white/40 border-white/10': selectedTicket().status === 'pending'
                     }">
-                {{ selectedTicket().status === 'paid' ? '✓ Pago Aprobado' : selectedTicket().status === 'verification' ? '⏳ En Verificación' : '○ Pendiente' }}
+                {{ selectedTicket().isCourtesy ? '🎁 Cortesía' : selectedTicket().status === 'paid' ? '✓ Pago Aprobado' : selectedTicket().status === 'verification' ? '⏳ En Verificación' : '○ Pendiente' }}
               </span>
               <span *ngIf="selectedTicket().isValidated" class="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase">
                 <span class="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span> Ingresó al Evento
               </span>
             </div>
 
-            <!-- Info Grid -->
             <div class="grid grid-cols-2 gap-px bg-white/[0.05] rounded-2xl overflow-hidden border border-white/[0.06]">
               <div class="bg-[#111] p-4">
                 <p class="text-[9px] uppercase font-bold text-white/25 tracking-widest mb-1.5">Nombre Completo</p>
@@ -435,7 +478,8 @@ import { lastValueFrom } from 'rxjs';
               </div>
               <div class="bg-[#111] p-4">
                 <p class="text-[9px] uppercase font-bold text-white/25 tracking-widest mb-1.5">Precio Pagado</p>
-                <p class="text-lg font-display font-bold text-secondary">S/ {{selectedTicket().price}}</p>
+                <p *ngIf="!selectedTicket().isCourtesy" class="text-lg font-display font-bold text-secondary">S/ {{selectedTicket().price}}</p>
+                <p *ngIf="selectedTicket().isCourtesy" class="text-sm font-bold text-purple-400">CORTESÍA</p>
               </div>
               <div class="bg-[#111] p-4">
                 <p class="text-[9px] uppercase font-bold text-white/25 tracking-widest mb-1.5">Zona</p>
@@ -458,7 +502,6 @@ import { lastValueFrom } from 'rxjs';
               </div>
             </div>
 
-            <!-- QR Code -->
             <div *ngIf="selectedTicket().qrToken" class="border border-dashed border-white/10 rounded-2xl p-6 text-center bg-white/[0.02]">
               <p class="text-[9px] uppercase font-bold text-white/25 tracking-[0.3em] mb-4">Código QR de Entrada</p>
               <div class="inline-block bg-white p-3 rounded-2xl mb-4 shadow-xl">
@@ -468,7 +511,6 @@ import { lastValueFrom } from 'rxjs';
             </div>
           </div>
 
-          <!-- Modal Footer -->
           <div class="px-6 py-4 bg-white/[0.02] border-t border-white/[0.05] flex gap-3">
             <button (click)="selectedTicket.set(null)" class="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase text-white/50 hover:text-white transition-all">
               Cerrar
@@ -477,6 +519,87 @@ import { lastValueFrom } from 'rxjs';
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               Eliminar
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== COURTESY TICKET MODAL ===== -->
+      <div *ngIf="showCourtesyModal()" class="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-6"
+           (click)="showCourtesyModal.set(false)">
+        <div class="bg-[#111] w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden border border-purple-500/20 shadow-2xl"
+             (click)="$event.stopPropagation()">
+
+          <div class="px-6 py-5 border-b border-white/[0.06] flex justify-between items-center"
+               style="background: linear-gradient(135deg, #1a0a2e 0%, #111 100%);">
+            <div>
+              <p class="text-[10px] font-bold uppercase text-purple-400 tracking-[0.2em] mb-1">Backoffice</p>
+              <h3 class="font-display text-xl font-bold">Generar Entrada de Cortesía</h3>
+            </div>
+            <button (click)="showCourtesyModal.set(false)" class="w-9 h-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-xl text-white/60 hover:text-white transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <!-- Success State -->
+          <div *ngIf="courtesySuccess()" class="p-10 text-center">
+            <div class="w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
+              <svg class="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h4 class="font-display text-2xl font-bold text-white mb-2">¡Entrada Generada!</h4>
+            <p class="text-white/40 text-sm">El QR y PDF fueron enviados al correo ingresado.</p>
+          </div>
+
+          <!-- Form State -->
+          <div *ngIf="!courtesySuccess()" class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="col-span-2">
+                <label class="block text-[10px] uppercase font-bold text-white/30 tracking-widest mb-1.5">Nombre Completo</label>
+                <input [(ngModel)]="courtesyForm.fullName" type="text" placeholder="Nombre y apellidos"
+                       class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:border-purple-500/50 outline-none transition-all">
+              </div>
+              <div>
+                <label class="block text-[10px] uppercase font-bold text-white/30 tracking-widest mb-1.5">DNI</label>
+                <input [(ngModel)]="courtesyForm.dni" type="text" maxlength="8" placeholder="12345678"
+                       class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:border-purple-500/50 outline-none transition-all font-mono">
+              </div>
+              <div>
+                <label class="block text-[10px] uppercase font-bold text-white/30 tracking-widest mb-1.5">Teléfono</label>
+                <input [(ngModel)]="courtesyForm.phone" type="text" placeholder="999888777"
+                       class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:border-purple-500/50 outline-none transition-all">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-[10px] uppercase font-bold text-white/30 tracking-widest mb-1.5">Correo Electrónico</label>
+                <input [(ngModel)]="courtesyForm.email" type="email" placeholder="correo@ejemplo.com"
+                       class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 focus:border-purple-500/50 outline-none transition-all">
+              </div>
+              <div class="col-span-2">
+                <label class="block text-[10px] uppercase font-bold text-white/30 tracking-widest mb-1.5">Tipo de Zona</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button type="button" (click)="courtesyForm.type = 'NACACHO'"
+                          class="py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all border"
+                          [ngClass]="courtesyForm.type === 'NACACHO' ? 'bg-secondary/20 text-secondary border-secondary/40' : 'bg-white/5 text-white/40 border-white/10'">
+                    NACACHO
+                  </button>
+                  <button type="button" (click)="courtesyForm.type = 'LLAMICHU'"
+                          class="py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all border"
+                          [ngClass]="courtesyForm.type === 'LLAMICHU' ? 'bg-primary/20 text-primary border-primary/40' : 'bg-white/5 text-white/40 border-white/10'">
+                    LLAMICHU
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+              <button (click)="showCourtesyModal.set(false)"
+                      class="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold uppercase text-white/50 hover:text-white transition-all">
+                Cancelar
+              </button>
+              <button (click)="generateCourtesy()" [disabled]="isGeneratingCourtesy() || !courtesyFormValid()"
+                      class="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold uppercase tracking-wide transition-all disabled:opacity-40 flex items-center justify-center gap-2">
+                <svg *ngIf="isGeneratingCourtesy()" class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                <span>{{isGeneratingCourtesy() ? 'Generando...' : 'Generar y Enviar'}}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -502,11 +625,29 @@ export class BackofficeComponent {
   isApproving: string | null = null;
   pinErrorMessage = signal('');
 
+  ticketFilter = signal<'all' | 'paid' | 'courtesy'>('all');
+
+  showCourtesyModal = signal(false);
+  courtesySuccess = signal(false);
+  isGeneratingCourtesy = signal(false);
+  courtesyForm = { fullName: '', dni: '', email: '', phone: '', type: 'NACACHO' };
+
+  get filteredTickets(): any[] {
+    const tickets = this.stats()?.allTickets || [];
+    const filter = this.ticketFilter();
+    if (filter === 'paid') return tickets.filter((t: any) => !t.isCourtesy);
+    if (filter === 'courtesy') return tickets.filter((t: any) => t.isCourtesy);
+    return tickets;
+  }
+
+  courtesyFormValid(): boolean {
+    const f = this.courtesyForm;
+    return !!(f.fullName && f.dni && f.email && f.phone && f.type);
+  }
+
   onPinChange() {
     this.pin = this.pin.replace(/\D/g, '');
-    if (this.pin.length === 4) {
-      this.login();
-    }
+    if (this.pin.length === 4) this.login();
   }
 
   login() {
@@ -541,7 +682,7 @@ export class BackofficeComponent {
       this.scanStatus.set(response);
       this.loadStats();
     } catch (e: any) {
-      this.scanStatus.set(e.error || { success: false, message: 'Error de conexión' });
+      this.scanStatus.set(e.error || { success: false, resultType: 'not_found', message: 'Error de conexión' });
     }
   }
 
@@ -569,5 +710,24 @@ export class BackofficeComponent {
 
   viewDetails(ticket: any) {
     this.selectedTicket.set(ticket);
+  }
+
+  async generateCourtesy() {
+    if (!this.courtesyFormValid()) return;
+    this.isGeneratingCourtesy.set(true);
+    try {
+      await lastValueFrom(this.http.post('/api/backoffice/courtesy-ticket', this.courtesyForm));
+      this.courtesySuccess.set(true);
+      this.courtesyForm = { fullName: '', dni: '', email: '', phone: '', type: 'NACACHO' };
+      this.loadStats();
+      setTimeout(() => {
+        this.showCourtesyModal.set(false);
+        this.courtesySuccess.set(false);
+      }, 2500);
+    } catch (e) {
+      alert('Error generando entrada de cortesía');
+    } finally {
+      this.isGeneratingCourtesy.set(false);
+    }
   }
 }
