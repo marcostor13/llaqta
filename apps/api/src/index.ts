@@ -15,11 +15,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
+// MongoDB Connection — reuse across warm invocations
 const MONGODB_URI = process.env.MONGODB_URI || '';
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+let isConnected = false;
+
+async function connectDB() {
+  if (isConnected && mongoose.connection.readyState === 1) return;
+  await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 10000, socketTimeoutMS: 45000 });
+  isConnected = true;
+  console.log('Connected to MongoDB');
+}
 
 // Ticket Schema
 const ticketSchema = new mongoose.Schema({
@@ -53,6 +58,7 @@ const router = express.Router();
 // 1. Purchase Request
 router.post('/tickets/purchase', async (req: Request, res: Response) => {
   try {
+    await connectDB();
     const { dni, email, fullName, type, price, phone } = req.body;
     
     const ticket = new Ticket({
@@ -75,6 +81,7 @@ router.post('/tickets/purchase', async (req: Request, res: Response) => {
 // 2. User notifies payment (Yape flow)
 router.post('/tickets/confirm', async (req: Request, res: Response) => {
   try {
+    await connectDB();
     const { ticketId } = req.body;
     
     const ticket = await Ticket.findById(ticketId);
@@ -94,6 +101,7 @@ router.post('/tickets/confirm', async (req: Request, res: Response) => {
 // 2b. Admin Approves Payment & Sends Email
 router.post('/backoffice/approve-payment', async (req: Request, res: Response) => {
   try {
+    await connectDB();
     const { ticketId } = req.body;
     
     const ticket = await Ticket.findById(ticketId);
@@ -194,6 +202,7 @@ router.post('/backoffice/approve-payment', async (req: Request, res: Response) =
 // 3. Validate QR (Backoffice)
 router.post('/tickets/validate', async (req: Request, res: Response) => {
   try {
+    await connectDB();
     const { qrToken } = req.body;
     
     const ticket = await Ticket.findOne({ qrToken });
@@ -229,6 +238,7 @@ router.post('/tickets/validate', async (req: Request, res: Response) => {
 // 4. Backoffice Stats
 router.get('/backoffice/stats', async (req: Request, res: Response) => {
   try {
+    await connectDB();
     const totalSales = await Ticket.countDocuments({ status: 'paid' });
     const pendingVerification = await Ticket.countDocuments({ status: 'verification' });
     const validatedCount = await Ticket.countDocuments({ isValidated: true });
@@ -252,6 +262,7 @@ router.get('/backoffice/stats', async (req: Request, res: Response) => {
 // 5. Delete Ticket (Backoffice)
 router.delete('/backoffice/tickets/:id', async (req: Request, res: Response) => {
   try {
+    await connectDB();
     const { id } = req.params;
     await Ticket.findByIdAndDelete(id);
     res.json({ message: 'Ticket eliminado correctamente' });
