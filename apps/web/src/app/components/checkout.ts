@@ -84,14 +84,13 @@ import { TicketService, TicketRequest } from '../services/ticket.service';
           <!-- Step 2: Yape Simulation -->
           <div *ngIf="step() === 2" class="space-y-6 text-center">
              <div class="mb-6">
-                <img src="https://logodownload.org/wp-content/uploads/2021/04/yape-logo-0.png" alt="Yape" class="h-12 mx-auto mb-4">
                 <h4 class="font-display text-2xl font-bold text-accent">Paga con Yape</h4>
                 <p class="text-xs text-gray-500 mt-2">Escanea el código o ingresa tu número móvil</p>
              </div>
 
              <!-- Yape QR Image -->
-             <div class="bg-white p-4 rounded-3xl shadow-xl inline-block border-2 border-primary/20 mb-6">
-                <img src="/yape-qr.png" alt="Yape QR" class="w-56 h-56 object-contain rounded-xl">
+             <div class="mb-6">
+                <img src="/qr.jpeg" alt="Yape QR" class="w-80 mx-auto rounded-xl">
              </div>
 
              <button [disabled]="ticketService.isProcessing()" (click)="confirm()" 

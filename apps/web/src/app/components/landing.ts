@@ -22,9 +22,10 @@ import { CheckoutComponent } from './checkout';
 
       <main class="flex-grow">
         <!-- Hero Section -->
-        <section class="relative h-[80vh] flex items-center justify-center overflow-hidden bg-fest-gradient">
-          <div class="absolute inset-0 opacity-40 mix-blend-overlay">
-            <img src="/flyer.jpeg" alt="Background" class="w-full h-full object-cover grayscale brightness-50">
+        <section class="relative h-[80vh] flex items-center justify-center overflow-hidden">
+          <div class="absolute inset-0">
+            <img src="/fondo.jpeg" alt="Background" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-black/55"></div>
           </div>
           
           <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
@@ -58,10 +59,16 @@ import { CheckoutComponent } from './checkout';
             </div>
             <div>
               <h2 class="font-display text-4xl font-bold text-accent mb-6">El evento más esperado del año</h2>
-              <p class="text-accent/70 text-lg mb-8 leading-relaxed">
-                Reunimos a los mejores exponentes de nuestra música en un escenario de primer nivel. 
-                Puquio se viste de gala para recibirte en un evento lleno de cultura, color y tradición.
-              </p>
+              <div class="text-accent/70 text-lg mb-8 leading-relaxed space-y-4">
+                <p>Existe un lugar donde mayo se convierte en fiesta…<br>donde siempre queremos volver.</p>
+                <p>Donde Tayta Achico abraza a sus hijos,<br>y las calles se llenan de reencuentros,<br>de familia, de amigos, de historia.</p>
+                <p>Es nuestro Llaqta,<br>donde el sol renace,<br>donde la fe vive,<br>y donde nuestras raíces nos guían.</p>
+                <p>Hoy, nuestra tierra celebra…<br>late…<br>y nos llama.</p>
+                <p class="font-bold text-accent">LLAQTA FEST 2026 – Tikuy Tusun Puquio<br>
+                  <span class="font-normal">No es solo un festival…<br>es volver a lo nuestro.</span>
+                </p>
+                <p class="font-semibold">No te lo pierdas.</p>
+              </div>
               <ul class="space-y-4">
                 <li *ngFor="let feat of features" class="flex items-center gap-3 text-dark/80">
                   <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary">✓</div>
