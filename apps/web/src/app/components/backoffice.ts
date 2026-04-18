@@ -348,7 +348,8 @@ import { lastValueFrom } from 'rxjs';
               <p class="text-white/30 text-xs text-center mt-1">Apunta la cámara al código QR del ticket</p>
             </div>
 
-            <div class="w-full rounded-3xl overflow-hidden ring-4 ring-white/5 shadow-2xl relative bg-black aspect-square">
+            <!-- Camera: destroyed from DOM when result shows to avoid video z-index issues on mobile -->
+            <div *ngIf="!scanStatus()" class="w-full rounded-3xl overflow-hidden ring-4 ring-white/5 shadow-2xl relative bg-black aspect-square">
               <zxing-scanner (scanSuccess)="onScanSuccess($event)" class="w-full h-full"></zxing-scanner>
               <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
                 <div class="w-48 h-48 relative">
@@ -358,6 +359,11 @@ import { lastValueFrom } from 'rxjs';
                   <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-secondary rounded-br-lg"></div>
                 </div>
               </div>
+            </div>
+
+            <!-- Waiting placeholder while result is showing -->
+            <div *ngIf="scanStatus()" class="w-full aspect-square rounded-3xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
+              <p class="text-white/20 text-xs uppercase font-bold tracking-widest">Cámara pausada</p>
             </div>
           </div>
 
@@ -626,6 +632,7 @@ export class BackofficeComponent {
   pinErrorMessage = signal('');
 
   ticketFilter = signal<'all' | 'paid' | 'courtesy'>('all');
+  private isScanning = false;
 
   showCourtesyModal = signal(false);
   courtesySuccess = signal(false);
@@ -676,13 +683,16 @@ export class BackofficeComponent {
   }
 
   async onScanSuccess(result: string) {
-    if (this.scanStatus()) return;
+    if (this.scanStatus() || this.isScanning) return;
+    this.isScanning = true;
     try {
       const response: any = await lastValueFrom(this.http.post('/api/tickets/validate', { qrToken: result }));
       this.scanStatus.set(response);
       this.loadStats();
     } catch (e: any) {
       this.scanStatus.set(e.error || { success: false, resultType: 'not_found', message: 'Error de conexión' });
+    } finally {
+      this.isScanning = false;
     }
   }
 
