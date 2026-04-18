@@ -20,19 +20,13 @@ export class PricingService {
       name: 'Pre-venta FASE 1',
       discount: 0.20,
       startDate: new Date('2026-04-12T00:00:00'),
-      endDate: new Date('2026-04-26T23:59:59')
+      endDate: new Date('2026-04-30T23:59:59')
     },
     {
       name: 'Pre-venta FASE 2',
-      discount: 0.14,
-      startDate: new Date('2026-04-27T00:00:00'),
-      endDate: new Date('2026-05-09T23:59:59')
-    },
-    {
-      name: 'Pre-venta FASE 3',
-      discount: 0.07,
-      startDate: new Date('2026-05-10T00:00:00'),
-      endDate: new Date('2026-05-16T23:59:59')
+      discount: 0.10,
+      startDate: new Date('2026-05-01T00:00:00'),
+      endDate: new Date('2026-05-13T23:59:59')
     }
   ];
 

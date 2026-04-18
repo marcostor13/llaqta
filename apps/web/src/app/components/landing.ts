@@ -45,7 +45,7 @@ import { CheckoutComponent } from './checkout';
               </button>
               <div class="flex items-center gap-2 text-white/60 text-sm">
                 <span class="w-2 h-2 bg-secondary rounded-full animate-pulse"></span>
-                Quedan pocas entradas en Fase 1
+                Quedan pocas entradas en Pre-venta
               </div>
             </div>
           </div>
