@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v \"^//\")",
+      "Bash(grep -E \"\\\\.dart$\")",
+      "Bash(xargs grep *)",
+      "Bash(xargs ls *)",
+      "Bash(python3 -m json.tool)",
+      "Bash(xargs wc *)",
+      "Bash(curl *)",
+      "Bash(git push *)"
+    ]
+  }
+}

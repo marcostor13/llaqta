@@ -151,13 +151,15 @@ async function generateTicketPDF(ticket: any, qrDataUrl: string): Promise<Buffer
     y: py(224, 14), font: helveticaBold, size: 14, color: brown, charSpacing: 2,
   });
 
-  // QR card
-  const qrSize = 185;
+  // QR card — 245pt (up from 185), source image 600px for crisp rendering
+  const qrSize = 245;
+  const qrPad = 12;
   const qrX = (W - qrSize) / 2;
-  const qrY = 270;
+  const qrY = 263;
   page.drawRectangle({
-    x: qrX - 14, y: py(qrY - 14, qrSize + 28), width: qrSize + 28, height: qrSize + 28,
-    color: white, borderColor: rgb(0.933, 0.933, 0.933), borderWidth: 1,
+    x: qrX - qrPad, y: py(qrY - qrPad, qrSize + qrPad * 2),
+    width: qrSize + qrPad * 2, height: qrSize + qrPad * 2,
+    color: white, borderColor: rgb(0.92, 0.92, 0.92), borderWidth: 1,
   });
   const qrBuffer = Buffer.from(qrDataUrl.replace(/^data:image\/png;base64,/, ''), 'base64');
   const qrImage = await pdfDoc.embedPng(qrBuffer);
@@ -166,39 +168,40 @@ async function generateTicketPDF(ticket: any, qrDataUrl: string): Promise<Buffer
   // Token & security label
   page.drawText(ticket.qrToken, {
     x: (W - courierBold.widthOfTextAtSize(ticket.qrToken, 11)) / 2,
-    y: py(qrY + qrSize + 22, 11), font: courierBold, size: 11, color: dark,
+    y: py(qrY + qrSize + 18, 11), font: courierBold, size: 11, color: dark,
   });
   const secLabel = 'CODIGO DE SEGURIDAD - NO COMPARTIR';
   page.drawText(secLabel, {
-    x: (W - helvetica.widthOfTextAtSize(secLabel, 7.5)) / 2,
-    y: py(qrY + qrSize + 40, 7.5), font: helvetica, size: 7.5, color: lightText, charSpacing: 1,
+    x: (W - helvetica.widthOfTextAtSize(secLabel, 7)) / 2,
+    y: py(qrY + qrSize + 33, 7), font: helvetica, size: 7, color: lightText, charSpacing: 1,
   });
 
   // Separator line
-  const sepY = qrY + qrSize + 68;
+  const sepY = qrY + qrSize + 52;
   page.drawLine({ start: { x: 50, y: py(sepY) }, end: { x: W - 50, y: py(sepY) }, thickness: 1, color: lightGray });
 
-  // Info card
-  const infoY = sepY + 18;
-  page.drawRectangle({ x: 40, y: py(infoY, 195), width: W - 80, height: 195, color: cream });
+  // Info card — compact 3-row layout
+  const infoY = sepY + 12;
+  const infoH = 158;
+  page.drawRectangle({ x: 40, y: py(infoY, infoH), width: W - 80, height: infoH, color: cream });
 
   const drawField = (x: number, y: number, label: string, value: string) => {
     page.drawText(label, { x, y: py(y, 7.5), font: helvetica, size: 7.5, color: gray, charSpacing: 0.8 });
-    page.drawText(value, { x, y: py(y + 12, 12), font: helveticaBold, size: 12, color: dark });
+    page.drawText(value, { x, y: py(y + 12, 11), font: helveticaBold, size: 11, color: dark });
   };
 
   const c1 = 70, c2 = 330;
-  drawField(c1, infoY + 18, 'NOMBRE COMPLETO', ticket.fullName);
-  drawField(c2, infoY + 18, 'DNI', ticket.dni);
-  drawField(c1, infoY + 72, 'TELEFONO / YAPE', ticket.phone);
-  drawField(c2, infoY + 72, 'CORREO ELECTRONICO', ticket.email);
+  drawField(c1, infoY + 13, 'NOMBRE COMPLETO', ticket.fullName);
+  drawField(c2, infoY + 13, 'DNI', ticket.dni);
+  drawField(c1, infoY + 57, 'TELEFONO / YAPE', ticket.phone);
+  drawField(c2, infoY + 57, 'CORREO ELECTRONICO', ticket.email);
   const fecha = new Intl.DateTimeFormat('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(ticket.createdAt));
-  drawField(c1, infoY + 130, 'FECHA DE COMPRA', fecha);
-  drawField(c2, infoY + 130, 'PRECIO PAGADO', ticket.isCourtesy ? 'CORTESÍA' : `S/ ${ticket.price}`);
+  drawField(c1, infoY + 101, 'FECHA DE COMPRA', fecha);
+  drawField(c2, infoY + 101, 'PRECIO PAGADO', ticket.isCourtesy ? 'CORTESÍA' : `S/ ${ticket.price}`);
 
-  // Footer
-  const footerY = 745;
-  page.drawRectangle({ x: 0, y: py(footerY, 97), width: W, height: 97, color: green });
+  // Footer — fills remaining page
+  const footerY = 739;
+  page.drawRectangle({ x: 0, y: py(footerY, H - footerY), width: W, height: H - footerY, color: green });
   page.drawRectangle({ x: 0, y: py(footerY, 5), width: W, height: 5, color: darkGreen });
 
   const footer1 = 'Este ticket es personal e intransferible';
@@ -209,12 +212,12 @@ async function generateTicketPDF(ticket: any, qrDataUrl: string): Promise<Buffer
   const footer2 = 'Presentalo en formato digital o impreso al ingresar al evento';
   page.drawText(footer2, {
     x: (W - helvetica.widthOfTextAtSize(footer2, 8.5)) / 2,
-    y: py(footerY + 37, 8.5), font: helvetica, size: 8.5, color: rgb(0.9, 0.9, 0.9),
+    y: py(footerY + 35, 8.5), font: helvetica, size: 8.5, color: rgb(0.9, 0.9, 0.9),
   });
   const footer3 = '© 2026 Llaqta Fest — Todos los derechos reservados — llaqtafest.netlify.app';
   page.drawText(footer3, {
     x: (W - helvetica.widthOfTextAtSize(footer3, 7.5)) / 2,
-    y: py(footerY + 62, 7.5), font: helvetica, size: 7.5, color: rgb(0.75, 0.75, 0.75),
+    y: py(footerY + 58, 7.5), font: helvetica, size: 7.5, color: rgb(0.75, 0.75, 0.75),
   });
 
   // Second page: terms & conditions
@@ -455,7 +458,7 @@ router.post('/backoffice/approve-payment', async (req: Request, res: Response) =
     }
 
     const qrToken = `LLAQTA-${ticket.dni}-${uuidv4().substring(0, 8)}`;
-    const qrDataUrl = await QRCode.toDataURL(qrToken);
+    const qrDataUrl = await QRCode.toDataURL(qrToken, { width: 600, margin: 2 });
 
     ticket.status = 'paid';
     ticket.qrToken = qrToken;
@@ -484,7 +487,7 @@ router.post('/backoffice/courtesy-ticket', async (req: Request, res: Response) =
     }
 
     const qrToken = `LLAQTA-${dni}-${uuidv4().substring(0, 8)}`;
-    const qrDataUrl = await QRCode.toDataURL(qrToken);
+    const qrDataUrl = await QRCode.toDataURL(qrToken, { width: 600, margin: 2 });
 
     const ticket = new Ticket({
       dni,
