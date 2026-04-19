@@ -511,43 +511,47 @@ router.post('/backoffice/courtesy-ticket', async (req: Request, res: Response) =
   }
 });
 
-// 3. Validate QR (Backoffice)
+// 3. Validate QR (Backoffice) — atomic findOneAndUpdate for max speed
 router.post('/tickets/validate', async (req: Request, res: Response) => {
   try {
     await connectDB();
     const { qrToken } = req.body;
 
-    const ticket = await Ticket.findOne({ qrToken });
-    if (!ticket) {
-      return res.status(404).json({
-        success: false,
-        resultType: 'not_found',
-        message: 'Código incorrecto o no existe'
+    if (!qrToken) {
+      return res.status(400).json({ success: false, resultType: 'not_found', message: 'Código incorrecto o no existe' });
+    }
+
+    // Single atomic operation: finds a non-validated ticket and marks it validated in one DB round-trip
+    const validated = await Ticket.findOneAndUpdate(
+      { qrToken, isValidated: { $ne: true } },
+      { $set: { isValidated: true, validatedAt: new Date() } },
+      { new: true, lean: true }
+    );
+
+    if (validated) {
+      return res.json({
+        success: true,
+        resultType: 'success',
+        message: 'Código validado correctamente',
+        dni: (validated as any).dni,
+        fullName: (validated as any).fullName,
+        ticketType: (validated as any).type
       });
     }
 
-    if (ticket.isValidated) {
-      return res.status(400).json({
-        success: false,
-        resultType: 'already_validated',
-        message: 'Código validado anteriormente',
-        dni: ticket.dni,
-        fullName: ticket.fullName,
-        validatedAt: ticket.validatedAt
-      });
+    // Null means: token not found OR already validated — check which
+    const existing = await Ticket.findOne({ qrToken }, 'dni fullName validatedAt').lean();
+    if (!existing) {
+      return res.status(404).json({ success: false, resultType: 'not_found', message: 'Código incorrecto o no existe' });
     }
 
-    ticket.isValidated = true;
-    ticket.validatedAt = new Date();
-    await ticket.save();
-
-    res.json({
-      success: true,
-      resultType: 'success',
-      message: 'Código validado correctamente',
-      dni: ticket.dni,
-      fullName: ticket.fullName,
-      ticketType: ticket.type
+    return res.status(400).json({
+      success: false,
+      resultType: 'already_validated',
+      message: 'Código validado anteriormente',
+      dni: (existing as any).dni,
+      fullName: (existing as any).fullName,
+      validatedAt: (existing as any).validatedAt
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

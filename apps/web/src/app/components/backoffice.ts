@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TicketService } from '../services/ticket.service';
 import { ZXingScannerModule } from '@zxing/ngx-scanner';
+import { BarcodeFormat } from '@zxing/library';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 
@@ -349,19 +350,30 @@ import { lastValueFrom } from 'rxjs';
             </div>
 
             <!-- Camera: destroyed from DOM when result shows to avoid video z-index issues on mobile -->
-            <div *ngIf="!scanStatus()" class="w-full rounded-3xl overflow-hidden ring-4 ring-white/5 shadow-2xl relative bg-black aspect-square">
-              <zxing-scanner (scanSuccess)="onScanSuccess($event)" class="w-full h-full"></zxing-scanner>
+            <div *ngIf="!scanStatus()" class="w-full rounded-3xl overflow-hidden ring-4 shadow-2xl relative bg-black aspect-square transition-all"
+                 [class.ring-secondary]="isScanProcessing()" [class.ring-white\/5]="!isScanProcessing()">
+              <zxing-scanner [formats]="qrFormats" (scanSuccess)="onScanSuccess($event)" class="w-full h-full"></zxing-scanner>
+
+              <!-- Scan frame -->
               <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div class="w-48 h-48 relative">
-                  <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-secondary rounded-tl-lg"></div>
-                  <div class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-secondary rounded-tr-lg"></div>
-                  <div class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-secondary rounded-bl-lg"></div>
-                  <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-secondary rounded-br-lg"></div>
+                <div class="w-52 h-52 relative">
+                  <div class="absolute top-0 left-0 w-10 h-10 border-t-[3px] border-l-[3px] border-secondary rounded-tl-xl"></div>
+                  <div class="absolute top-0 right-0 w-10 h-10 border-t-[3px] border-r-[3px] border-secondary rounded-tr-xl"></div>
+                  <div class="absolute bottom-0 left-0 w-10 h-10 border-b-[3px] border-l-[3px] border-secondary rounded-bl-xl"></div>
+                  <div class="absolute bottom-0 right-0 w-10 h-10 border-b-[3px] border-r-[3px] border-secondary rounded-br-xl"></div>
+                  <!-- Scanning line animation -->
+                  <div *ngIf="!isScanProcessing()" class="absolute left-2 right-2 h-0.5 bg-secondary/60 scan-line"></div>
                 </div>
+              </div>
+
+              <!-- Processing flash overlay -->
+              <div *ngIf="isScanProcessing()" class="absolute inset-0 bg-secondary/10 flex flex-col items-center justify-center gap-3">
+                <div class="w-12 h-12 rounded-full border-2 border-secondary border-t-transparent animate-spin"></div>
+                <p class="text-secondary font-bold text-xs uppercase tracking-widest">Verificando...</p>
               </div>
             </div>
 
-            <!-- Waiting placeholder while result is showing -->
+            <!-- Placeholder while result is showing -->
             <div *ngIf="scanStatus()" class="w-full aspect-square rounded-3xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center">
               <p class="text-white/20 text-xs uppercase font-bold tracking-widest">Cámara pausada</p>
             </div>
@@ -371,12 +383,16 @@ import { lastValueFrom } from 'rxjs';
       </div>
 
       <!-- ===== FULLSCREEN SCANNER RESULT OVERLAY ===== -->
-      <div *ngIf="scanStatus()" class="fixed inset-0 z-[200] flex flex-col items-center justify-center p-8 transition-all"
+      <div *ngIf="scanStatus()" class="fixed inset-0 z-[200] flex flex-col items-center justify-center p-8"
            [ngClass]="{
              'bg-green-600': scanStatus()?.resultType === 'success',
              'bg-orange-500': scanStatus()?.resultType === 'already_validated',
              'bg-red-600': scanStatus()?.resultType === 'not_found' || !scanStatus()?.resultType
            }">
+        <!-- Auto-dismiss progress bar -->
+        <div class="absolute top-0 left-0 right-0 h-1.5 bg-black/20">
+          <div class="h-full bg-white/60 autodismiss-bar"></div>
+        </div>
 
         <!-- Icon -->
         <div class="w-32 h-32 rounded-full bg-white/20 flex items-center justify-center mb-8">
@@ -424,7 +440,7 @@ import { lastValueFrom } from 'rxjs';
         </div>
 
         <!-- Dismiss button -->
-        <button (click)="scanStatus.set(null)"
+        <button (click)="resetScan()"
                 class="mt-10 px-10 py-4 bg-white/20 hover:bg-white/30 rounded-2xl text-white font-bold text-sm uppercase tracking-widest transition-all active:scale-95">
           Escanear otro ticket
         </button>
@@ -616,9 +632,27 @@ import { lastValueFrom } from 'rxjs';
     :host { display: block; }
     .scrollbar-hide::-webkit-scrollbar { display: none; }
     .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+    .scan-line {
+      top: 0;
+      animation: scanLine 2s ease-in-out infinite;
+    }
+    @keyframes scanLine {
+      0%   { top: 4px; opacity: 1; }
+      50%  { top: calc(100% - 4px); opacity: 1; }
+      100% { top: 4px; opacity: 1; }
+    }
+
+    .autodismiss-bar {
+      animation: shrink 3s linear forwards;
+    }
+    @keyframes shrink {
+      from { width: 100%; }
+      to   { width: 0%; }
+    }
   `]
 })
-export class BackofficeComponent {
+export class BackofficeComponent implements OnDestroy {
   http = inject(HttpClient);
   ticketService = inject(TicketService);
 
@@ -631,8 +665,14 @@ export class BackofficeComponent {
   isApproving: string | null = null;
   pinErrorMessage = signal('');
 
+  // Scanner state
   ticketFilter = signal<'all' | 'paid' | 'courtesy'>('all');
   private isScanning = false;
+  isScanProcessing = signal(false);
+  private autoDismissTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Only decode QR codes — skips 20+ other formats, ~10x faster detection
+  readonly qrFormats = [BarcodeFormat.QR_CODE];
 
   showCourtesyModal = signal(false);
   courtesySuccess = signal(false);
@@ -685,15 +725,34 @@ export class BackofficeComponent {
   async onScanSuccess(result: string) {
     if (this.scanStatus() || this.isScanning) return;
     this.isScanning = true;
+    this.isScanProcessing.set(true);
+    // Haptic feedback on mobile
+    if (navigator.vibrate) navigator.vibrate(40);
     try {
       const response: any = await lastValueFrom(this.http.post('/api/tickets/validate', { qrToken: result }));
       this.scanStatus.set(response);
-      this.loadStats();
+      this.scheduleAutoDismiss();
     } catch (e: any) {
       this.scanStatus.set(e.error || { success: false, resultType: 'not_found', message: 'Error de conexión' });
+      this.scheduleAutoDismiss(4000);
     } finally {
       this.isScanning = false;
+      this.isScanProcessing.set(false);
     }
+  }
+
+  private scheduleAutoDismiss(ms = 3000) {
+    if (this.autoDismissTimer) clearTimeout(this.autoDismissTimer);
+    this.autoDismissTimer = setTimeout(() => this.resetScan(), ms);
+  }
+
+  resetScan() {
+    if (this.autoDismissTimer) { clearTimeout(this.autoDismissTimer); this.autoDismissTimer = null; }
+    this.scanStatus.set(null);
+  }
+
+  ngOnDestroy() {
+    if (this.autoDismissTimer) clearTimeout(this.autoDismissTimer);
   }
 
   async approvePayment(ticketId: string) {

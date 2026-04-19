@@ -14,7 +14,12 @@
       "Bash(node -e \"const ts = require\\('./apps/web/node_modules/typescript'\\); console.log\\('TS version:', ts.version\\);\")",
       "Bash(node apps/web/node_modules/typescript/bin/tsc --noEmit -p apps/web/tsconfig.app.json)",
       "Bash(netstat -ano)",
-      "Bash(findstr :3000)"
+      "Bash(findstr :3000)",
+      "Bash(node apps/api/node_modules/typescript/bin/tsc --noEmit -p apps/api/tsconfig.json)",
+      "Bash(node node_modules/typescript/bin/tsc --noEmit -p apps/api/tsconfig.json)",
+      "Bash(ls apps/api/node_modules/.bin/tsc*)",
+      "Bash(ls node_modules/.bin/tsc*)",
+      "Bash(node_modules/.bin/tsc.exe --noEmit -p apps/api/tsconfig.json)"
     ]
   }
 }
